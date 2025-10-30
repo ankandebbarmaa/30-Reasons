@@ -248,6 +248,22 @@
 
       /* Small tweaks */
       .hint { font-size: 12px; opacity: 0.6; margin-top: 6px; }
+      /* Audio hint */
+      .audio-hint {
+        position: fixed;
+        left: 50%;
+        bottom: 16px;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--rose-gold);
+        border: 1px solid #ffe0ea;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 13px;
+        box-shadow: 0 8px 18px var(--shadow);
+        z-index: 10;
+        backdrop-filter: blur(6px);
+      }
 
       @media (max-width: 768px) {
         .container { padding: 18px; }
@@ -320,6 +336,7 @@
       Your browser does not support the audio element.
     </audio>
     <span class="sr-only" id="audioDesc">Background romantic music playing.</span>
+    <div class="audio-hint" id="audioHint">Tap anywhere to enable music 🔊</div>
 
     <script>
       (function() {
@@ -333,6 +350,7 @@
         const envelope = document.getElementById('envelope');
         const heartsLayer = document.getElementById('hearts');
         const bgm = document.getElementById('bgm');
+        const audioHint = document.getElementById('audioHint');
 
         // Set fixed name without prompt
         herNameSpan.textContent = 'Jiya';
@@ -440,22 +458,47 @@
         });
 
         // Background music attempt on load; many browsers block until user action
+        // Autoplay policy handling: start muted, unmute on first user interaction
+        function attemptAutoplayMuted() {
+          try {
+            bgm.muted = true;
+            bgm.volume = 0.0;
+            bgm.play().catch(() => {});
+          } catch (e) {}
+        }
         window.addEventListener('load', () => {
-          // Slight delay to not fight with page paint
-          setTimeout(() => {
-            bgm.volume = 0.6;
-            bgm.play().catch(() => {
-              // Will start on first interaction
-            });
-          }, 300);
+          setTimeout(attemptAutoplayMuted, 200);
         });
 
         // Also hook first user interaction as a fallback to start audio
-        const startOnFirstGesture = () => {
-          try { bgm.play().catch(() => {}); } catch(e) {}
-          window.removeEventListener('pointerdown', startOnFirstGesture);
-        };
-        window.addEventListener('pointerdown', startOnFirstGesture, { once: true });
+        function enableSoundOnGesture() {
+          try {
+            bgm.muted = false;
+            const target = 0.6;
+            let v = bgm.volume || 0.0;
+            const step = 0.06;
+            const id = setInterval(() => {
+              v = Math.min(target, v + step);
+              bgm.volume = v;
+              if (v >= target) clearInterval(id);
+            }, 80);
+            bgm.play().catch(() => {});
+            if (audioHint) audioHint.style.display = 'none';
+          } catch (e) {}
+          removeGestureListeners();
+        }
+        function removeGestureListeners() {
+          window.removeEventListener('pointerdown', enableSoundOnGesture);
+          window.removeEventListener('touchstart', enableSoundOnGesture);
+          window.removeEventListener('click', enableSoundOnGesture);
+          window.removeEventListener('keydown', enableSoundOnGesture);
+          window.removeEventListener('scroll', enableSoundOnGesture);
+        }
+        window.addEventListener('pointerdown', enableSoundOnGesture, { once: true, passive: true });
+        window.addEventListener('touchstart', enableSoundOnGesture, { once: true, passive: true });
+        window.addEventListener('click', enableSoundOnGesture, { once: true });
+        window.addEventListener('keydown', enableSoundOnGesture, { once: true });
+        window.addEventListener('scroll', enableSoundOnGesture, { once: true, passive: true });
       })();
     </script>
   </body>
