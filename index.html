@@ -242,22 +242,6 @@
       .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
       audio.hidden-controls { position: absolute; opacity: 0; width: 0; height: 0; }
 
-      /* Minimal enable-music button shown only if autoplay fails */
-      .audio-enable {
-        position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
-        display: none; align-items: center; gap: 8px;
-        background: rgba(255, 255, 255, 0.95);
-        color: var(--rose-gold);
-        border: 1px solid #ffe0ea;
-        border-radius: 999px;
-        padding: 10px 16px;
-        font-size: 14px; font-weight: 600;
-        box-shadow: 0 8px 18px var(--shadow);
-        backdrop-filter: blur(6px);
-        z-index: 15;
-        cursor: pointer;
-      }
-
       /* Small tweaks */
       .hint { font-size: 12px; opacity: 0.6; margin-top: 6px; }
       
@@ -294,7 +278,7 @@
           </button>
         </div>
         <div class="counter" id="counter">0 / 30 revealed</div>
-        <div class="hint">Sound is on. If you don't hear music, tap the heart once.</div>
+        <div class="hint">Sound is on. If you don't hear music, then you are in love with me.</div>
 
         <p class="final" id="finalMsg">But the reason I love you has no limit… it will continue till the day we die 💞</p>
         <div class="hint" id="envelopeHint" style="display:none;">Tap the envelope to open.</div>
@@ -333,7 +317,6 @@
       Your browser does not support the audio element.
     </audio>
     <span class="sr-only" id="audioDesc">Background romantic music playing.</span>
-    <button id="audioEnable" class="audio-enable" type="button"><i class="fa-solid fa-music"></i> Enable music</button>
 
     <script>
       (function() {
@@ -347,7 +330,6 @@
         const envelope = document.getElementById('envelope');
         const heartsLayer = document.getElementById('hearts');
         const bgm = document.getElementById('bgm');
-        const audioEnable = document.getElementById('audioEnable');
         
 
         // Set fixed name without prompt
@@ -455,49 +437,15 @@
           envelope.classList.toggle('open');
         });
 
-        // Try to autoplay with sound on load; if blocked, show enable button
-        function tryAutoplayWithFallback() {
-          let resolved = false;
-          const done = () => { resolved = true; };
-          try {
-            bgm.muted = false;
-            bgm.volume = 0.6;
-            const p = bgm.play();
-            if (p && typeof p.then === 'function') {
-              p.then(() => { done(); }).catch(() => { /* ignore */ });
-            } else { done(); }
-          } catch (e) {}
-          // After a moment, if not playing, reveal button
+        // Try to autoplay with sound on load
+        window.addEventListener('load', () => {
           setTimeout(() => {
-            if (!resolved || bgm.paused) {
-              audioEnable.style.display = 'inline-flex';
-            }
-          }, 600);
-        }
-        window.addEventListener('load', () => { setTimeout(tryAutoplayWithFallback, 200); });
-
-        // Robust enable on user click with gentle fade-in
-        audioEnable.addEventListener('click', async () => {
-          try {
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (AudioCtx) {
-              const ctx = new AudioCtx();
-              if (ctx.state === 'suspended') { await ctx.resume(); }
-            }
-          } catch {}
-          try {
-            bgm.muted = false;
-            let v = 0.0; const target = 0.6; bgm.volume = v;
-            await bgm.play();
-            const id = setInterval(() => {
-              v = Math.min(target, v + 0.06);
-              bgm.volume = v;
-              if (v >= target) clearInterval(id);
-            }, 80);
-            audioEnable.style.display = 'none';
-          } catch (e) {
-            // keep the button visible so they can try again
-          }
+            try {
+              bgm.muted = false;
+              bgm.volume = 0.6;
+              bgm.play().catch(() => {});
+            } catch (e) {}
+          }, 200);
         });
       })();
     </script>
